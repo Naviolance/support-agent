@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+coverage/
+*.tsbuildinfo
+
+# Environment (secrets live here, never in git)
+.env
+.env.*.local
+
+# Logs and OS files
+*.log
+.DS_Store

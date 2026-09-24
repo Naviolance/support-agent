@@ -8,6 +8,34 @@ Stack: TypeScript, NestJS, PostgreSQL, Claude API (tool use).
 
 Status: in progress. Progress is tracked in commits.
 
+## Run it locally
+
+Requires Node 22+ and Docker.
+
+```bash
+cp .env.example .env
+npm install            # also generates the Prisma client
+npm run db:up          # starts the agent's Postgres on port 5434
+npm run db:migrate     # creates the tables
+npm run start:dev
+curl localhost:3000/health   # {"status":"ok","database":"ok"}
+```
+
+## Agent database
+
+The agent stores its own data in a separate Postgres (Prisma 7):
+
+- `conversations`: one per chat, with status `OPEN`, `RESOLVED` or
+  `ESCALATED`, and the escalation reason.
+- `messages`: every turn, stored as Claude API content blocks so the
+  history can be replayed exactly. `seq` keeps strict order, because
+  Postgres `now()` gives every row in one transaction the same timestamp.
+- `tool_calls`: one row per tool execution with input, output, error flag
+  and duration.
+
+Metrics (resolved vs escalated, tool error rate, latency, token usage) are
+queries over these tables.
+
 ## Store database access
 
 The agent reads the store database through one Postgres user,

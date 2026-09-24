@@ -1,0 +1,100 @@
+// The agent's own database: every conversation, every message and every
+// tool call. Metrics (resolved vs escalated, tool error rates, latency,
+// token cost) are queries over these tables, not separate tables.
+//
+// The store's data (orders, products) is NOT here. The agent reads it from
+// the store database through the read-only agent_readonly user.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Channel {
+  WEB
+  WHATSAPP
+}
+
+enum ConversationStatus {
+  OPEN // the agent is still handling it
+  RESOLVED // the agent answered and the conversation ended without a human
+  ESCALATED // handed to a human (escalateToHuman tool, or an error)
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model Conversation {
+  id      String             @id @default(uuid())
+  channel Channel
+  status  ConversationStatus @default(OPEN)
+
+  // Why a human was needed, written by the escalateToHuman tool.
+  escalationReason String?
+
+  messages  Message[]
+  toolCalls ToolCall[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  closedAt  DateTime? // set when status leaves OPEN
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("conversations")
+}
+
+// One turn in the Claude API conversation, stored exactly as sent to or
+// received from the API, so the history can be replayed on the next turn.
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  // Strict insert order. createdAt cannot give it: Postgres now() is the
+  // start time of the transaction, so every row written in one transaction
+  // gets the same createdAt. The Claude API needs the history in exact order.
+  seq Int @default(autoincrement())
+
+  role MessageRole
+
+  // Claude API content blocks: text, tool_use and tool_result. Tool results
+  // are sent back to the API with role "user", so they are USER rows here.
+  content Json
+
+  // Token usage reported by the API. Set on ASSISTANT rows only.
+  inputTokens  Int?
+  outputTokens Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId, seq])
+  @@map("messages")
+}
+
+// One execution of one tool. This duplicates what is inside Message.content,
+// on purpose: here it is queryable ("how often does getOrder fail?").
+model ToolCall {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  toolUseId  String // the id Claude gave this call (tool_use block id)
+  name       String // getOrder, searchProducts, escalateToHuman
+  input      Json
+  output     Json
+  isError    Boolean @default(false)
+  durationMs Int
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([name, createdAt])
+  @@map("tool_calls")
+}

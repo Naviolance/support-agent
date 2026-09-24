@@ -1,0 +1,22 @@
+# The agent's own Postgres. The store runs its Postgres separately on 5433.
+services:
+  agent-postgres:
+    image: postgres:16-alpine
+    container_name: support_agent_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${AGENT_DB_USER}
+      POSTGRES_PASSWORD: ${AGENT_DB_PASSWORD}
+      POSTGRES_DB: ${AGENT_DB_NAME}
+    ports:
+      - "${AGENT_DB_PORT:-5434}:5432"
+    volumes:
+      - support_agent_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AGENT_DB_USER} -d ${AGENT_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  support_agent_postgres_data:

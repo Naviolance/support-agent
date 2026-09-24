@@ -13,3 +13,5 @@ coverage/
 # Logs and OS files
 *.log
 .DS_Store
+
+/src/generated/prisma

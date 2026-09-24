@@ -34,3 +34,14 @@ STORE_READONLY_URL="postgresql://agent_readonly:<password>@localhost:5433/truckp
 In production the agent would call the store's HTTP API instead of its
 database, so the store keeps full control of its data. Direct read-only
 access keeps this project small while the agent logic is the focus.
+
+## Decisions
+
+- **No agent framework.** The tool-use loop is written by hand, so every
+  step (model call, tool call, result, next call) is visible and testable.
+- **Customers prove who they are with order number + phone number.** The
+  agent only shares an order's details when both match the same order.
+  An order number alone is guessable, and the phone number is already on
+  every order, so the agent never needs to read the users table.
+- **NestJS 12** (ES modules, Vitest, oxlint), the current release, rather
+  than matching the store's NestJS 10.

@@ -21,6 +21,28 @@ npm run start:dev
 curl localhost:3000/health   # {"status":"ok","database":"ok"}
 ```
 
+## Store tools
+
+`StoreService` reads the store database as `agent_readonly`. These
+functions become the agent's tools in the next step.
+
+- `getOrder(orderNumber, phone)`: returns the order only when both match.
+  Phones match on their last 9 digits, so `+237 6 99 00 00 00` and
+  `699000000` are the same number. A wrong phone and an unknown order give
+  the same "not found", so the agent never confirms that an order exists.
+  The shipping address and phone are never selected.
+- `searchProducts(text)`: searches name, English and French descriptions,
+  part number and cross-reference numbers. Published products only, at
+  most 5, in-stock first. `%` and `_` in the search text match literally.
+
+Try them without the agent:
+
+```bash
+npm run build
+npm run store:try -- order ORD-20260920-K3F9QZ "+237 699 000 000"
+npm run store:try -- search "brake pad"
+```
+
 ## Agent database
 
 The agent stores its own data in a separate Postgres (Prisma 7):

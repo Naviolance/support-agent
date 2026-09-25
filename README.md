@@ -4,7 +4,7 @@ An AI agent that handles customer messages for a truck spare parts store.
 It reads the message, checks orders and products in the store database
 (read-only), and either replies or escalates to a human.
 
-Stack: TypeScript, NestJS, PostgreSQL, Claude API (tool use).
+Stack: TypeScript, NestJS, PostgreSQL, Gemini API (function calling).
 
 Status: in progress. Progress is tracked in commits.
 
@@ -21,14 +21,23 @@ npm run start:dev
 curl localhost:3000/health   # {"status":"ok","database":"ok"}
 ```
 
+Tests:
+
+```bash
+npm test           # unit tests, no database or network
+npm run test:e2e   # real databases, scripted fake model (no Gemini calls)
+npm run test:live  # the real Gemini model: ~8 requests of the free tier's
+                   # daily quota (20 per model on gemini-3.8-flash)
+```
+
 ## Agent database
 
 The agent stores its own data in a separate Postgres (Prisma 7):
 
 - `conversations`: one per chat, with status `OPEN`, `RESOLVED` or
   `ESCALATED`, and the escalation reason.
-- `messages`: every turn, stored as Claude API content blocks so the
-  history can be replayed exactly. `seq` keeps strict order, because
+- `messages`: every turn, stored in the model provider's own format so
+  the history can be replayed exactly. `seq` keeps strict order, because
   Postgres `now()` gives every row in one transaction the same timestamp.
 - `tool_calls`: one row per tool execution with input, output, error flag
   and duration.
@@ -73,3 +82,14 @@ access keeps this project small while the agent logic is the focus.
   every order, so the agent never needs to read the users table.
 - **NestJS 12** (ES modules, Vitest, oxlint), the current release, rather
   than matching the store's NestJS 10.
+- **Gemini (free tier) as the model, behind a `ModelClient` interface.**
+  The tools, the loop and the database only use the agent's own types.
+  `GeminiModelClient` is the one file that knows Gemini's format, so moving
+  to another provider (Claude, OpenAI) means writing one new client. The
+  free tier lets Google use requests to improve its products, so it only
+  ever sees seed data.
+- **`generateContent`, not the Interactions API.** Each request sends the
+  whole conversation from our database. Google keeps no state, the stored
+  history is exactly what the model saw, and tests can swap in a scripted
+  fake model. Messages are stored in Gemini's own format because Gemini 3
+  requires its thought signatures to be sent back unchanged.

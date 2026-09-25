@@ -50,8 +50,9 @@ model Conversation {
   @@map("conversations")
 }
 
-// One turn in the Claude API conversation, stored exactly as sent to or
-// received from the API, so the history can be replayed on the next turn.
+// One turn of the conversation with the AI model, stored exactly as sent to
+// or received from the model's API, so the history can be replayed on the
+// next turn.
 model Message {
   id             String       @id @default(uuid())
   conversationId String
@@ -59,13 +60,15 @@ model Message {
 
   // Strict insert order. createdAt cannot give it: Postgres now() is the
   // start time of the transaction, so every row written in one transaction
-  // gets the same createdAt. The Claude API needs the history in exact order.
+  // gets the same createdAt. The model needs the history in exact order.
   seq Int @default(autoincrement())
 
   role MessageRole
 
-  // Claude API content blocks: text, tool_use and tool_result. Tool results
-  // are sent back to the API with role "user", so they are USER rows here.
+  // The provider's own message format (Gemini: a Content object with its
+  // parts, including thought signatures that must be sent back unchanged).
+  // Tool results are sent to the model on the user side, so they are USER
+  // rows here.
   content Json
 
   // Token usage reported by the API. Set on ASSISTANT rows only.
@@ -85,7 +88,7 @@ model ToolCall {
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  toolUseId  String // the id Claude gave this call (tool_use block id)
+  toolUseId  String // the id the model gave this call ('' if it gave none)
   name       String // getOrder, searchProducts, escalateToHuman
   input      Json
   output     Json

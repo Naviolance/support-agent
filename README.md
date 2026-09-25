@@ -4,7 +4,7 @@ An AI agent that handles customer messages for a truck spare parts store.
 It reads the message, checks orders and products in the store database
 (read-only), and either replies or escalates to a human.
 
-Stack: TypeScript, NestJS, PostgreSQL, Claude API (tool use).
+Stack: TypeScript, NestJS, PostgreSQL, Gemini API (function calling).
 
 Status: in progress. Progress is tracked in commits.
 
@@ -73,3 +73,9 @@ access keeps this project small while the agent logic is the focus.
   every order, so the agent never needs to read the users table.
 - **NestJS 12** (ES modules, Vitest, oxlint), the current release, rather
   than matching the store's NestJS 10.
+- **Gemini (free tier) as the model, behind a `ModelClient` interface.**
+  The tools, the loop and the database only use the agent's own types.
+  `GeminiModelClient` is the one file that knows Gemini's format, so moving
+  to another provider (Claude, OpenAI) means writing one new client. The
+  free tier lets Google use requests to improve its products, so it only
+  ever sees seed data.

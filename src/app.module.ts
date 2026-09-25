@@ -4,14 +4,14 @@ import { validateEnv } from './config/env.validation.js';
 import { HealthController } from './health/health.controller.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { StoreModule } from './store/store.module.js';
-import { ToolsModule } from './tools/tools.module.js';
+import { AgentModule } from './agent/agent.module.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     PrismaModule,
     StoreModule,
-    ToolsModule,
+    AgentModule,
   ],
   controllers: [HealthController],
 })
